@@ -1,0 +1,56 @@
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(build.sourcesDirectory)'
+    includeRootFolder: false
+- task: PublishBuildArtifacts@1
+
+# Additional steps for building and deploying HTML project
+- job: BuildAndDeploy
+  displayName: 'Build and Deploy HTML project'
+  dependsOn: 
+    - ArchiveFiles
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+
+  # Add any build steps here if needed (e.g., preprocess your HTML)
+
+  # Example: Run tests (if any)
+  - script: 
+      echo "Running tests..."
+    displayName: 'Run Tests'
+
+  # Example: Deploy to hosting service
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: 'current'
+      artifactName: 'drop'
+      downloadPath: '$(System.ArtifactsDirectory)'
+    displayName: 'Download Artifact'
+
+  # Deploying index.html to the appropriate location
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(System.ArtifactsDirectory)'
+      Contents: 'index.html'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Copy index.html'
+
+  # Add your deployment steps here. For example, deploying to Azure Blob Storage:
+  - task: AzureFileCopy@4
+    inputs:
+      SourcePath: '$(Build.ArtifactStagingDirectory)'
+      azureSubscription: 'YourAzureSubscription'
+      Destination: 'AzureBlob'
+      storage: 'YourStorageAccount'
+      ContainerName: 'YourContainerName'
+      BlobPrefix: ''
+    displayName: 'Deploy to Azure Blob Storage'
